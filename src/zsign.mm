@@ -11,9 +11,36 @@
 #include "macho.h"
 #include "bundle.h"
 #include "timer.h"
+#include "log.h"
+#include "log_keys.h"
 #include "common/archive.h"
 
 #include <openssl/ocsp.h>
+
+static void(^s_logHandler)(NSString*) = nil;
+
+static void ZLogBridge(const char* szLog, int nColor) {
+	if (s_logHandler && szLog) {
+		NSString* ns = [NSString stringWithUTF8String:szLog];
+		s_logHandler(ns);
+	}
+}
+
+struct ZLogGuard {
+	bool active;
+	ZLogGuard(void(^h)(NSString*)) : active(h != nil) {
+		if (active) {
+			s_logHandler = h;
+			ZLog::SetLogCallback(ZLogBridge);
+		}
+	}
+	~ZLogGuard() {
+		if (active) {
+			ZLog::ClearLogCallback();
+			s_logHandler = nil;
+		}
+	}
+};
 #include <openssl/x509.h>
 #include <openssl/pem.h>
 #include <openssl/bio.h>
@@ -22,6 +49,10 @@
 #include <openssl/asn1.h>
 
 extern "C" {
+
+void ZsignSetLogLocale(const char* locale) {
+	ZL10n::SetLocale(locale);
+}
 
 bool CheckIfSigned(NSString *filePath) {
 	ZTimer gtimer;
@@ -173,8 +204,10 @@ int zsign(
 	NSString *bundleversion,
 	bool adhoc,
 	bool excludeprovion,
-	void(^completionHandler)(BOOL success, NSError *error)
+	void(^completionHandler)(BOOL success, NSError *error),
+	void(^logHandler)(NSString *log)
 ) {
+	ZLogGuard logGuard(logHandler);
 	ZTimer atimer;
 	ZTimer gtimer;
 	
@@ -205,7 +238,7 @@ int zsign(
 	
 	string strPath = [app cStringUsingEncoding:NSUTF8StringEncoding];
 	if (!ZFile::IsFileExists(strPath.c_str())) {
-		ZLog::ErrorV(">>> Invalid path! %s\n", strPath.c_str());
+		ZLog::ErrorV(ZL10n::GetFmt(ZL10nKeys::INVALID_PATH), strPath.c_str());
 		return -1;
 	}
 	
@@ -220,8 +253,8 @@ int zsign(
 	atimer.Reset();
 	ZBundle bundle;
 	bool bRet = bundle.SignFolder(&zsa, strFolder, strBundleId, strBundleVersion, strDisplayName, arrDylibFiles, arrRemoveDylibNames, bForce, bWeakInject, bEnableCache, excludeprovion);
-	ZLog::PrintV(">>> Signing:\t%s %s\n", strPath.c_str(), (bAdhoc ? " (Ad-hoc)" : ""));
-	atimer.PrintResult(bRet, ">>> Signed %s!", bRet ? "OK" : "Failed");
+	ZLog::PrintV(ZL10n::GetFmt(ZL10nKeys::SIGNING), ZUtil::GetBaseName(strPath.c_str()), (bAdhoc ? ZL10n::Get(ZL10nKeys::ADHOC) : ""));
+	atimer.PrintResult(bRet, ZL10n::GetFmt(ZL10nKeys::SIGNED_FMT), bRet ? ZL10n::Get(ZL10nKeys::SIGNED_OK) : ZL10n::Get(ZL10nKeys::SIGNED_FAILED));
 	
 	NSError* signError = nil;
 	if(!bundle.signFailedFiles.empty()) {
@@ -233,7 +266,7 @@ int zsign(
 	
 	completionHandler(bRet, signError);
 	
-	gtimer.Print(">>> Done.");
+	gtimer.Print(ZL10n::Get(ZL10nKeys::DONE));
 	return bRet ? 0 : -1;
 }
 
@@ -250,8 +283,10 @@ int zsignIPA(
 	bool adhoc,
 	bool excludeprovion,
 	int zipLevel,
-	void(^completionHandler)(BOOL success, NSError *error)
+	void(^completionHandler)(BOOL success, NSError *error),
+	void(^logHandler)(NSString *log)
 ) {
+	ZLogGuard logGuard(logHandler);
 	ZTimer atimer;
 	ZTimer gtimer;
 	
@@ -276,12 +311,12 @@ int zsignIPA(
 	string strOutputFile = [outputPath cStringUsingEncoding:NSUTF8StringEncoding];
 	
 	if (!ZFile::IsFileExists(strPath.c_str())) {
-		ZLog::ErrorV(">>> Invalid input path! %s\n", strPath.c_str());
+		ZLog::ErrorV(ZL10n::GetFmt(ZL10nKeys::INVALID_INPUT_PATH), strPath.c_str());
 		if (completionHandler) completionHandler(NO, [NSError errorWithDomain:@"Zsign" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"Invalid input path"}]);
 		return -1;
 	}
 	if (strOutputFile.empty()) {
-		ZLog::ErrorV(">>> Output path is required for signIPA.\n");
+		ZLog::ErrorV(ZL10n::GetFmt(ZL10nKeys::OUTPUT_PATH_REQUIRED));
 		if (completionHandler) completionHandler(NO, [NSError errorWithDomain:@"Zsign" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"Output path is required"}]);
 		return -1;
 	}
@@ -303,24 +338,24 @@ int zsignIPA(
 		bTempFolder = true;
 		bEnableCache = false;
 		strFolder = ZFile::GetRealPathV("%s/zsign_folder_%llu", strTempFolder.c_str(), ZUtil::GetMicroSecond());
-		ZLog::PrintV(">>> Unzip:\t%s (%s) -> %s ... \n", strPath.c_str(), ZFile::GetFileSizeString(strPath.c_str()).c_str(), strFolder.c_str());
+		ZLog::PrintV(ZL10n::GetFmt(ZL10nKeys::UNZIP), ZUtil::GetBaseName(strPath.c_str()), ZFile::GetFileSizeString(strPath.c_str()).c_str());
 		if (!Zip::Extract(strPath.c_str(), strFolder.c_str())) {
-			ZLog::ErrorV(">>> Unzip failed!\n");
+			ZLog::ErrorV(ZL10n::GetFmt(ZL10nKeys::UNZIP_FAILED));
 			if (completionHandler) completionHandler(NO, [NSError errorWithDomain:@"Zsign" code:-1 userInfo:@{NSLocalizedDescriptionKey: @"Unzip failed"}]);
 			return -1;
 		}
-		atimer.PrintResult(true, ">>> Unzip OK!");
+		atimer.PrintResult(true, ZL10n::Get(ZL10nKeys::UNZIP_OK));
 	}
 	
 	atimer.Reset();
 	ZBundle bundle;
 	bool bRet = bundle.SignFolder(&zsa, strFolder, strBundleId, strBundleVersion, strDisplayName, arrDylibFiles, arrRemoveDylibNames, bForce, bWeakInject, bEnableCache, excludeprovion);
-	ZLog::PrintV(">>> Signing:\t%s %s\n", strPath.c_str(), (bAdhoc ? " (Ad-hoc)" : ""));
-	atimer.PrintResult(bRet, ">>> Signed %s!", bRet ? "OK" : "Failed");
+	ZLog::PrintV(ZL10n::GetFmt(ZL10nKeys::SIGNING), ZUtil::GetBaseName(strPath.c_str()), (bAdhoc ? ZL10n::Get(ZL10nKeys::ADHOC) : ""));
+	atimer.PrintResult(bRet, ZL10n::GetFmt(ZL10nKeys::SIGNED_FMT), bRet ? ZL10n::Get(ZL10nKeys::SIGNED_OK) : ZL10n::Get(ZL10nKeys::SIGNED_FAILED));
 	
 	if (bRet && !strOutputFile.empty()) {
 		atimer.Reset();
-		ZLog::PrintV(">>> Archiving: \t%s ... \n", strOutputFile.c_str());
+		ZLog::PrintV(ZL10n::GetFmt(ZL10nKeys::ARCHIVING), ZUtil::GetBaseName(strOutputFile.c_str()));
 		string strBaseFolder;
 		bool bNeedCleanPayload = false;
 		size_t pos = bundle.m_strAppFolder.rfind("Payload");
@@ -335,12 +370,12 @@ int zsignIPA(
 			NSString* destApp = [NSString stringWithUTF8String:(strPayloadFolder + "/" + strAppName).c_str()];
 			NSFileManager* fm = [NSFileManager defaultManager];
 			if (![fm createDirectoryAtPath:[NSString stringWithUTF8String:strPayloadFolder.c_str()] withIntermediateDirectories:YES attributes:nil error:nil]) {
-				ZLog::Error(">>> Failed to create Payload folder!\n");
+				ZLog::Error(ZL10n::GetFmt(ZL10nKeys::FAILED_CREATE_PAYLOAD));
 				bRet = false;
 			} else {
 				NSError* copyErr = nil;
 				if (![fm copyItemAtPath:srcApp toPath:destApp error:&copyErr]) {
-					ZLog::ErrorV(">>> Failed to copy app to Payload: %s\n", copyErr ? [[copyErr localizedDescription] UTF8String] : "unknown");
+					ZLog::ErrorV(ZL10n::GetFmt(ZL10nKeys::FAILED_COPY_APP), copyErr ? [[copyErr localizedDescription] UTF8String] : "unknown");
 					bRet = false;
 					ZFile::RemoveFolder(strPayloadRoot.c_str());
 				} else {
@@ -351,10 +386,10 @@ int zsignIPA(
 		}
 		if (bRet && !strBaseFolder.empty()) {
 			if (!Zip::Archive(strBaseFolder.c_str(), strOutputFile.c_str(), nZipLevel)) {
-				ZLog::Error(">>> Archive failed!\n");
+				ZLog::Error(ZL10n::GetFmt(ZL10nKeys::ARCHIVE_FAILED));
 				bRet = false;
 			} else {
-				atimer.PrintResult(true, ">>> Archive OK! (%s)", ZFile::GetFileSizeString(strOutputFile.c_str()).c_str());
+				atimer.PrintResult(true, ZL10n::GetFmt(ZL10nKeys::ARCHIVE_OK), ZFile::GetFileSizeString(strOutputFile.c_str()).c_str());
 			}
 			if (bNeedCleanPayload) {
 				ZFile::RemoveFolder(strBaseFolder.c_str());
@@ -372,7 +407,7 @@ int zsignIPA(
 	}
 	if (completionHandler) completionHandler(bRet, signError);
 	
-	gtimer.Print(">>> Done.");
+	gtimer.Print(ZL10n::Get(ZL10nKeys::DONE));
 	return bRet ? 0 : -1;
 }
 

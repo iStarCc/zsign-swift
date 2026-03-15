@@ -21,6 +21,9 @@ bool UninstallDylibs(NSString *filePath, NSArray<NSString *> *dylibPathsArray);
 NSArray<NSString *> *ListDylibs(NSString *filePath);
 bool ChangeDylibPath(NSString *filePath, NSString *oldPath, NSString *newPath);
 
+/// 设置日志语言: "zh" 简体中文, "en" 英文
+void ZsignSetLogLocale(const char* locale);
+
 int zsign(
 	NSString *app,
 	NSString *prov,
@@ -32,7 +35,8 @@ int zsign(
 	NSString *bundleversion,
 	bool adhoc,
 	bool dontGenerateEmbeddedMobileProvision,
-	void(^completionHandler)(BOOL success, NSError *error)
+	void(^completionHandler)(BOOL success, NSError *error),
+	void(^logHandler)(NSString *log)
 );
 
 int checkCert(
@@ -61,7 +65,8 @@ int zsignIPA(
 	bool adhoc,
 	bool excludeprovion,
 	int zipLevel,
-	void(^completionHandler)(BOOL success, NSError *error)
+	void(^completionHandler)(BOOL success, NSError *error),
+	void(^logHandler)(NSString *log)
 );
 
 #ifdef __cplusplus

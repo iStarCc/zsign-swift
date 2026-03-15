@@ -8,6 +8,12 @@
 import Zsign
 
 public enum Zsign {
+    /// 设置日志语言
+    /// - Parameter locale: "zh" 简体中文, "en" 英文
+    public static func setLogLocale(_ locale: String) {
+        ZsignSetLogLocale(locale)
+    }
+
     /// 检查 Mach-O 文件是否已正确签名
     /// - Parameter appExecutable: 可执行文件路径
     /// - Returns: 已签名返回 true
@@ -64,6 +70,7 @@ public enum Zsign {
     ///   - adhoc: 是否使用 Ad-hoc 签名
     ///   - removeProvision: 是否在签名后移除 embedded.mobileprovision
     ///   - completion: 完成回调 (success, error)
+    ///   - logHandler: 实时日志回调，运行过程中每产生一条日志即调用
     /// - Returns: 调用成功返回 true
     public static func sign(
         appPath: String = "",
@@ -76,7 +83,8 @@ public enum Zsign {
         customVersion: String = "",
         adhoc: Bool = false,
         removeProvision: Bool = false,
-        completion: ((Bool, Error?) -> Void)? = nil
+        completion: ((Bool, Error?) -> Void)? = nil,
+        logHandler: ((String) -> Void)? = nil
     ) -> Bool {
         if zsign(
             appPath,
@@ -93,7 +101,8 @@ public enum Zsign {
                 { success, error in
                     callback(success, error)
                 }
-            }
+            },
+            logHandler.map { h in { (s: String?) in if let s = s { h(s) } } }
         ) != 0 {
             return false
         }
@@ -106,6 +115,7 @@ public enum Zsign {
     ///   - outputPath: 输出 IPA 路径（必填）
     ///   - zipLevel: ZIP 压缩级别 0-9，默认 6
     ///   - 其他参数同 sign
+    ///   - logHandler: 实时日志回调，运行过程中每产生一条日志即调用
     /// - Returns: 调用成功返回 true
     public static func signIPA(
         inputPath: String,
@@ -120,7 +130,8 @@ public enum Zsign {
         adhoc: Bool = false,
         removeProvision: Bool = false,
         zipLevel: Int = 6,
-        completion: ((Bool, Error?) -> Void)? = nil
+        completion: ((Bool, Error?) -> Void)? = nil,
+        logHandler: ((String) -> Void)? = nil
     ) -> Bool {
         if zsignIPA(
             inputPath,
@@ -139,7 +150,8 @@ public enum Zsign {
                 { success, error in
                     callback(success, error)
                 }
-            }
+            },
+            logHandler.map { h in { (s: String?) in if let s = s { h(s) } } }
         ) != 0 {
             return false
         }

@@ -31,7 +31,13 @@ public:
 	static void PrintV(int nLevel, const char* szFormat, ...);
 	static void SetLogLever(int nLogLevel) { g_nLogLevel = nLogLevel; }
 
+	/// 日志回调：szLog 为日志内容，nColor 为类型 (0=普通, 6=警告, 10=成功, 12=错误)
+	typedef void (*LogCallback)(const char* szLog, int nColor);
+	static void SetLogCallback(LogCallback cb);
+	static void ClearLogCallback();
+
 private:
 	static void _Print(const char* szLog, int nColor = 0);
 	static int g_nLogLevel;
+	static LogCallback g_sLogCallback;
 };

@@ -91,7 +91,8 @@ Zsign.signIPA(
     customVersion: "1.0",
     adhoc: false,
     removeProvision: false,
-    zipLevel: 6
+    zipLevel: 6,
+    logHandler: { log in print(log, terminator: "") }  // 实时输出运行日志
 ) { success, error in
     if success {
         print("IPA 签名打包成功")
@@ -111,7 +112,8 @@ Zsign.sign(
     customName: "My App",
     customVersion: "1.0",
     adhoc: false,
-    removeProvision: false
+    removeProvision: false,
+    logHandler: { log in print(log, terminator: "") }  // 实时输出运行日志
 ) { success, error in
     if success {
         print("签名成功")
@@ -119,6 +121,9 @@ Zsign.sign(
         print("签名失败: \(error?.localizedDescription ?? "")")
     }
 }
+
+// 设置日志语言（可选，默认 zh 简体中文）
+Zsign.setLogLocale("en")  // 切换为英文
 
 // 检查证书吊销状态
 Zsign.checkRevokage(

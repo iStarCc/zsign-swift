@@ -2,6 +2,15 @@
 
 
 int ZLog::g_nLogLevel = ZLog::E_INFO;
+ZLog::LogCallback ZLog::g_sLogCallback = nullptr;
+
+void ZLog::SetLogCallback(LogCallback cb) {
+	g_sLogCallback = cb;
+}
+
+void ZLog::ClearLogCallback() {
+	g_sLogCallback = nullptr;
+}
 
 void ZLog::_Print(const char* szLog, int nColor)
 {
@@ -23,7 +32,7 @@ void ZLog::_Print(const char* szLog, int nColor)
 
 #else
 
-	const char* szColor = NULL;
+	const char* szColor = nullptr;
 	switch (nColor) {
 		case 6:
 			szColor = "\033[33m";
@@ -47,6 +56,10 @@ void ZLog::_Print(const char* szLog, int nColor)
 	}
 	
 #endif
+
+	if (g_sLogCallback && szLog) {
+		g_sLogCallback(szLog, nColor);
+	}
 }
 
 void ZLog::Print(int nLevel, const char* szLog)

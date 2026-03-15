@@ -59,6 +59,7 @@ let package = Package(
                 "common/fs.cpp",
                 "common/json.cpp",
                 "common/log.cpp",
+                "common/l10n.cpp",
                 "common/sha.cpp",
                 "common/timer.cpp",
                 "common/util.cpp"
