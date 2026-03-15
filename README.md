@@ -5,6 +5,7 @@
 ## 功能特性
 
 - **应用签名**：对 .app 应用包进行代码签名
+- **IPA 签名打包**：支持 .ipa 或 .app 输入，使用 minizip 打包为 IPA（与 zsign 行为一致，安装兼容性好）
 - **检查签名**：验证 Mach-O 文件是否已正确签名
 - **Dylib 注入**：向可执行文件注入动态库加载命令
 - **Dylib 管理**：列出、移除、修改 dylib 路径
@@ -77,7 +78,29 @@ let dylibs = Zsign.listDylibs(appExecutable: "/path/to/app")
 // 修改 dylib 路径
 Zsign.changeDylibPath(appExecutable: "/path/to/app", for: "/old/path.dylib", with: "@rpath/new.dylib")
 
-// 签名应用包
+// 签名并直接输出 IPA（支持 .ipa 或 .app 输入，使用 minizip 打包，一步完成无需单独打包）
+Zsign.signIPA(
+    inputPath: "/path/to/demo.ipa",
+    outputPath: "/path/to/output.ipa",
+    provisionPath: "/path/to/profile.mobileprovision",
+    p12Path: "/path/to/cert.p12",
+    p12Password: "password",
+    entitlementsPath: "/path/to/entitlements.plist",
+    customIdentifier: "com.example.app",
+    customName: "My App",
+    customVersion: "1.0",
+    adhoc: false,
+    removeProvision: false,
+    zipLevel: 6
+) { success, error in
+    if success {
+        print("IPA 签名打包成功")
+    } else {
+        print("失败: \(error?.localizedDescription ?? "")")
+    }
+}
+
+// 签名应用包（仅 .app，不打包）
 Zsign.sign(
     appPath: "/path/to/App.app",
     provisionPath: "/path/to/profile.mobileprovision",
@@ -140,6 +163,7 @@ zsign-swift/
 ## 依赖
 
 - [OpenSSL](https://github.com/krzyzanowskim/OpenSSL) (krzyzanowskim/OpenSSL)
+- minizip（来自 [zlib contrib](https://github.com/madler/zlib/tree/master/contrib/minizip)，已内置于 `src/minizip/`）
 
 ## License
 

@@ -24,14 +24,28 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "minizip",
+            path: "src/minizip",
+            sources: [
+                "ioapi.c",
+                "zip.c",
+                "unzip.c"
+            ],
+            publicHeadersPath: ".",
+            cSettings: [
+                .headerSearchPath(".")
+            ],
+            linkerSettings: [
+                .linkedLibrary("z")
+            ]
+        ),
+        .target(
             name: "Zsign",
             dependencies: [
-                .product(name: "OpenSSL", package: "OpenSSL")
+                .product(name: "OpenSSL", package: "OpenSSL"),
+                "minizip"
             ],
             path: "src",
-            exclude: [
-                "common/archive.cpp",
-            ],
             sources: [
                 "archo.cpp",
                 "bundle.cpp",
@@ -40,6 +54,7 @@ let package = Package(
                 "openssl_tools.mm",
                 "signing.cpp",
                 "zsign.mm",
+                "common/archive.cpp",
                 "common/base64.cpp",
                 "common/fs.cpp",
                 "common/json.cpp",
@@ -52,10 +67,11 @@ let package = Package(
             cxxSettings: [
                 .headerSearchPath("."),
                 .headerSearchPath("common"),
+                .headerSearchPath("minizip"),
                 .unsafeFlags(["-std=c++17"])
             ],
             linkerSettings: [
-                .linkedFramework("OpenSSL"),
+                .linkedFramework("OpenSSL")
             ]
         ),
         .target(

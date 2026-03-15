@@ -42,6 +42,28 @@ int checkCert(
 	void(^completionHandler)(int status, NSDate* expirationDate, NSString *error)
 );
 
+/// 签名并打包 IPA（支持 IPA 输入或 .app 目录，输出 IPA）
+/// - Parameters:
+///   - inputPath: 输入路径（.ipa 文件或 .app 目录）
+///   - outputPath: 输出 IPA 路径（必填）
+///   - 其他参数同 zsign
+/// - Returns: 成功返回 0，失败返回 -1
+int zsignIPA(
+	NSString *inputPath,
+	NSString *outputPath,
+	NSString *prov,
+	NSString *key,
+	NSString *pass,
+	NSString *entitlement,
+	NSString *bundleid,
+	NSString *displayname,
+	NSString *bundleversion,
+	bool adhoc,
+	bool excludeprovion,
+	int zipLevel,
+	void(^completionHandler)(BOOL success, NSError *error)
+);
+
 #ifdef __cplusplus
 }
 #endif

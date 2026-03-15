@@ -303,10 +303,10 @@ bool ZBundle::SignNode(jvalue& jvNode)
 				if (!macho.Sign(m_pSignAsset, m_bForceSign, "", "", "", "")) {
 					signFailedFiles += strFile;
 					signFailedFiles += "\n";
+					return false;  // 与 zsign 一致：任一 Mach-O 签名失败立即中止，避免部分签名导致无法安装
 				}
 			} else {
-				signFailedFiles += strFile;
-				signFailedFiles += "\n";
+				ZLog::WarnV(">>> Warning: Skipping non-Mach-O file: \t%s\n", strFile.c_str());
 			}
 		}
 	}

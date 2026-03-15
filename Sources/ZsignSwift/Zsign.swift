@@ -100,6 +100,52 @@ public enum Zsign {
         return true
     }
 
+    /// 签名并打包为 IPA（支持 .ipa 或 .app 输入，使用 minizip 打包，与 zsign 行为一致）
+    /// - Parameters:
+    ///   - inputPath: 输入路径（.ipa 文件或 .app 目录）
+    ///   - outputPath: 输出 IPA 路径（必填）
+    ///   - zipLevel: ZIP 压缩级别 0-9，默认 6
+    ///   - 其他参数同 sign
+    /// - Returns: 调用成功返回 true
+    public static func signIPA(
+        inputPath: String,
+        outputPath: String,
+        provisionPath: String = "",
+        p12Path: String = "",
+        p12Password: String = "",
+        entitlementsPath: String = "",
+        customIdentifier: String = "",
+        customName: String = "",
+        customVersion: String = "",
+        adhoc: Bool = false,
+        removeProvision: Bool = false,
+        zipLevel: Int = 6,
+        completion: ((Bool, Error?) -> Void)? = nil
+    ) -> Bool {
+        if zsignIPA(
+            inputPath,
+            outputPath,
+            provisionPath,
+            p12Path,
+            p12Password,
+            entitlementsPath,
+            customIdentifier,
+            customName,
+            customVersion,
+            adhoc,
+            removeProvision,
+            Int32(zipLevel),
+            completion.map { callback in
+                { success, error in
+                    callback(success, error)
+                }
+            }
+        ) != 0 {
+            return false
+        }
+        return true
+    }
+
     /// 检查证书吊销状态
     /// - Parameters:
     ///   - provisionPath: 描述文件路径
